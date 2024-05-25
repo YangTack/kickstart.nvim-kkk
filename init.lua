@@ -194,8 +194,6 @@ vim.keymap.set('n', '<C-j>', '<C-w><C-j>', { desc = 'Move focus to the lower win
 vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper window' })
 vim.keymap.set({ 'n', 'i' }, '<C-s>', '<esc>:w<cr>', { desc = '[S]ave current file' })
 vim.keymap.set('i', 'jk', '<esc>', { desc = 'Press Esc' })
-vim.keymap.set({ 'n', 'i' }, '<m-i>', '<esc>i```{python}<cr>```<esc>O', { desc = '[i]nsert code chunk' })
-vim.keymap.set({ 'n' }, '<leader>ci', ':split term://ipython<cr>', { desc = '[c]ode repl [i]python' })
 
 -- [[ Basic Autocommands ]]
 --  See `:help lua-guide-autocommands`
@@ -286,6 +284,20 @@ require('lazy').setup({
           return substitute(dedented_lines, add_eol_pat, "\n", "g")
         end
       endfunction
+      function! _EscapeText_python(text)
+        if slime#config#resolve("python_ipython") && len(split(a:text,"\n")) > 1
+          return ["%cpaste -q\n", slime#config#resolve("dispatch_ipython_pause"), a:text, "--\n"]
+        else
+          let empty_lines_pat = '\(^\|\n\)\zs\(\s*\n\+\)\+'
+          let no_empty_lines = substitute(a:text, empty_lines_pat, "", "g")
+          let dedent_pat = '\(^\|\n\)\zs'.matchstr(no_empty_lines, '^\s*')
+          let dedented_lines = substitute(no_empty_lines, dedent_pat, "", "g")
+          let except_pat = '\(elif\|else\|except\|finally\)\@!'
+          let add_eol_pat = '\n\s[^\n]\+\n\zs\ze\('.except_pat.'\S\|$\)'
+          return substitute(dedented_lines, add_eol_pat, "\n", "g")
+        end
+      endfunction
+
     ]]
     end,
     config = function()
