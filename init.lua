@@ -91,7 +91,7 @@ vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
 
 -- Set to true if you have a Nerd Font installed and selected in the terminal
-vim.g.have_nerd_font = false
+vim.g.have_nerd_font = true
 
 -- [[ Setting options ]]
 -- See `:help vim.opt`
@@ -262,50 +262,107 @@ require('lazy').setup({
     },
   },
 
-  -- vim-slime
   {
-    'jpalardy/vim-slime',
+    'benlubas/molten-nvim',
+    version = '^1.8.3', -- use version <2.0.0 to avoid breaking changes
+    build = ':UpdateRemotePlugins',
+    dependencies = {
+      '3rd/image.nvim',
+      opts = {},
+    },
+    ft = { 'python', 'quarto' },
     init = function()
-      vim.g.slime_target = 'neovim'
-      vim.g.slime_python_ipython = 1
-      vim.g.slime_dispatch_ipython_pause = 100
-      vim.g.slime_cell_delimiter = '#\\s\\=%%'
-      vim.cmd [[
-      function! _EscapeText_quarto(text)
-        if slime#config#resolve("python_ipython") && len(split(a:text,"\n")) > 1
-          return ["%cpaste -q\n", slime#config#resolve("dispatch_ipython_pause"), a:text, "--\n"]
-        else
-          let empty_lines_pat = '\(^\|\n\)\zs\(\s*\n\+\)\+'
-          let no_empty_lines = substitute(a:text, empty_lines_pat, "", "g")
-          let dedent_pat = '\(^\|\n\)\zs'.matchstr(no_empty_lines, '^\s*')
-          let dedented_lines = substitute(no_empty_lines, dedent_pat, "", "g")
-          let except_pat = '\(elif\|else\|except\|finally\)\@!'
-          let add_eol_pat = '\n\s[^\n]\+\n\zs\ze\('.except_pat.'\S\|$\)'
-          return substitute(dedented_lines, add_eol_pat, "\n", "g")
-        end
-      endfunction
-      function! _EscapeText_python(text)
-        if slime#config#resolve("python_ipython") && len(split(a:text,"\n")) > 1
-          return ["%cpaste -q\n", slime#config#resolve("dispatch_ipython_pause"), a:text, "--\n"]
-        else
-          let empty_lines_pat = '\(^\|\n\)\zs\(\s*\n\+\)\+'
-          let no_empty_lines = substitute(a:text, empty_lines_pat, "", "g")
-          let dedent_pat = '\(^\|\n\)\zs'.matchstr(no_empty_lines, '^\s*')
-          let dedented_lines = substitute(no_empty_lines, dedent_pat, "", "g")
-          let except_pat = '\(elif\|else\|except\|finally\)\@!'
-          let add_eol_pat = '\n\s[^\n]\+\n\zs\ze\('.except_pat.'\S\|$\)'
-          return substitute(dedented_lines, add_eol_pat, "\n", "g")
-        end
-      endfunction
+      -- this is an example, not a default. Please see the readme for more configuration options
+      vim.g.molten_output_win_max_height = 12
+      -- I find auto open annoying, keep in mind setting this option will require setting
+      -- a keybind for `:noautocmd MoltenEnterOutput` to open the output again
+      vim.g.molten_auto_open_output = false
 
-    ]]
+      -- this guide will be using image.nvim
+      -- Don't forget to setup and install the plugin if you want to view image outputs
+      vim.g.molten_image_provider = 'image.nvim'
+
+      -- optional, I like wrapping. works for virt text and the output window
+      vim.g.molten_wrap_output = true
+
+      -- Output as virtual text. Allows outputs to always be shown, works with images, but can
+      -- be buggy with longer images
+      vim.g.molten_virt_text_output = true
+
+      -- this will make it so the output shows up below the \`\`\` cell delimiter
+      vim.g.molten_virt_lines_off_by_1 = true
     end,
     config = function()
-      vim.keymap.set({ 'n', 'i' }, '<c-cr>', function()
-        vim.cmd [[ call slime#send_cell() ]]
-      end, { desc = 'Send code cell to terminal' })
+      vim.keymap.set({ 'n' }, '<leader>mi', ':MoltenInit<cr>', { desc = '[M]olten [i]nit' })
+      vim.keymap.set({ 'n' }, '<c-cr>', '<esc>:MoltenEvaluateLine<cr>', { desc = '[E]valuate line' })
+      vim.keymap.set({ 'v' }, '<c-cr>', ':<c-u>MoltenEvaluateVisual<cr><esc>', { desc = '[E]valuate visual' })
+      vim.keymap.set({ 'i' }, '<c-cr>', '<esc>:MoltenEvaluateLine<cr>i', { desc = '[E]valuate line' })
+      vim.keymap.set({ 'n' }, '<leader>mc', '<esc>:MoltenInterrupt<cr>', { desc = '[M]olten interrupt' })
     end,
   },
+  {
+    -- see the image.nvim readme for more information about configuring this plugin
+    '3rd/image.nvim',
+    dependencies = { 'luarocks.nvim' },
+    opts = {
+      backend = 'kitty', -- whatever backend you would like to use
+      max_width = 100,
+      max_height = 12,
+      max_height_window_percentage = math.huge,
+      max_width_window_percentage = math.huge,
+      window_overlap_clear_enabled = true, -- toggles images when windows are overlapped
+      window_overlap_clear_ft_ignore = { 'cmp_menu', 'cmp_docs', '' },
+    },
+  },
+  {
+    'vhyrro/luarocks.nvim',
+    priority = 1000, -- Very high priority is required, luarocks.nvim should run as the first plugin in your config.
+    config = true,
+  },
+  -- vim-slime
+  -- {
+  --   'jpalardy/vim-slime',
+  --   init = function()
+  --     vim.g.slime_target = 'neovim'
+  --     vim.g.slime_python_ipython = 1
+  --     vim.g.slime_dispatch_ipython_pause = 100
+  --     vim.g.slime_cell_delimiter = '#\\s\\=%%'
+  --     vim.cmd [[
+  --     function! _EscapeText_quarto(text)
+  --       if slime#config#resolve("python_ipython") && len(split(a:text,"\n")) > 1
+  --         return ["%cpaste -q\n", slime#config#resolve("dispatch_ipython_pause"), a:text, "--\n"]
+  --       else
+  --         let empty_lines_pat = '\(^\|\n\)\zs\(\s*\n\+\)\+'
+  --         let no_empty_lines = substitute(a:text, empty_lines_pat, "", "g")
+  --         let dedent_pat = '\(^\|\n\)\zs'.matchstr(no_empty_lines, '^\s*')
+  --         let dedented_lines = substitute(no_empty_lines, dedent_pat, "", "g")
+  --         let except_pat = '\(elif\|else\|except\|finally\)\@!'
+  --         let add_eol_pat = '\n\s[^\n]\+\n\zs\ze\('.except_pat.'\S\|$\)'
+  --         return substitute(dedented_lines, add_eol_pat, "\n", "g")
+  --       end
+  --     endfunction
+  --     function! _EscapeText_python(text)
+  --       if slime#config#resolve("python_ipython") && len(split(a:text,"\n")) > 1
+  --         return ["%cpaste -q\n", slime#config#resolve("dispatch_ipython_pause"), a:text, "--\n"]
+  --       else
+  --         let empty_lines_pat = '\(^\|\n\)\zs\(\s*\n\+\)\+'
+  --         let no_empty_lines = substitute(a:text, empty_lines_pat, "", "g")
+  --         let dedent_pat = '\(^\|\n\)\zs'.matchstr(no_empty_lines, '^\s*')
+  --         let dedented_lines = substitute(no_empty_lines, dedent_pat, "", "g")
+  --         let except_pat = '\(elif\|else\|except\|finally\)\@!'
+  --         let add_eol_pat = '\n\s[^\n]\+\n\zs\ze\('.except_pat.'\S\|$\)'
+  --         return substitute(dedented_lines, add_eol_pat, "\n", "g")
+  --       end
+  --     endfunction
+  --
+  --   ]]
+  --   end,
+  --   config = function()
+  --     vim.keymap.set({ 'n', 'i' }, '<c-cr>', function()
+  --       vim.cmd [[ call slime#send_cell() ]]
+  --     end, { desc = 'Send code cell to terminal' })
+  --   end,
+  -- },
 
   -- Here is a more advanced example where we pass configuration
   -- options to `gitsigns.nvim`. This is equivalent to the following Lua:
@@ -848,16 +905,24 @@ require('lazy').setup({
     -- change the command in the config to whatever the name of that colorscheme is.
     --
     -- If you want to see what colorschemes are already installed, you can use `:Telescope colorscheme`.
-    'folke/tokyonight.nvim',
+    -- 'folke/tokyonight.nvim',
+    'Mofiqul/vscode.nvim',
     priority = 1000, -- Make sure to load this before all the other start plugins.
     init = function()
       -- Load the colorscheme here.
       -- Like many other themes, this one has different styles, and you could load
       -- any other, such as 'tokyonight-storm', 'tokyonight-moon', or 'tokyonight-day'.
-      vim.cmd.colorscheme 'tokyonight-night'
+      vim.cmd.colorscheme 'vscode'
 
       -- You can configure highlights by doing something like:
       vim.cmd.hi 'Comment gui=none'
+    end,
+  },
+
+  {
+    'andrew-george/telescope-themes',
+    config = function()
+      require('telescope').load_extension 'themes'
     end,
   },
 
