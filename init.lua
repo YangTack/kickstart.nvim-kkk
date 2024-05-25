@@ -91,7 +91,7 @@ vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
 
 -- Set to true if you have a Nerd Font installed and selected in the terminal
-vim.g.have_nerd_font = false
+vim.g.have_nerd_font = true
 
 -- [[ Setting options ]]
 -- See `:help vim.opt`
@@ -120,6 +120,11 @@ vim.opt.breakindent = true
 
 -- Save undo history
 vim.opt.undofile = true
+
+-- set default shiftwidth
+vim.opt.shiftwidth = 4
+vim.opt.expandtab = true
+vim.opt.tabstop = 4
 
 -- Case-insensitive searching UNLESS \C or one or more capital letters in the search term
 vim.opt.ignorecase = true
@@ -189,6 +194,8 @@ vim.keymap.set('n', '<C-h>', '<C-w><C-h>', { desc = 'Move focus to the left wind
 vim.keymap.set('n', '<C-l>', '<C-w><C-l>', { desc = 'Move focus to the right window' })
 vim.keymap.set('n', '<C-j>', '<C-w><C-j>', { desc = 'Move focus to the lower window' })
 vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper window' })
+vim.keymap.set({ 'n', 'i' }, '<C-s>', '<esc>:w<cr>', { desc = '[S]ave current file' })
+vim.keymap.set('i', 'jk', '<esc>', { desc = 'Press Esc' })
 
 -- [[ Basic Autocommands ]]
 --  See `:help lua-guide-autocommands`
@@ -201,6 +208,14 @@ vim.api.nvim_create_autocmd('TextYankPost', {
   group = vim.api.nvim_create_augroup('kickstart-highlight-yank', { clear = true }),
   callback = function()
     vim.highlight.on_yank()
+  end,
+})
+
+vim.api.nvim_create_autocmd('TermOpen', {
+  desc = 'Remove line numbers in terminal',
+  group = vim.api.nvim_create_augroup('kickstart-term', { clear = true }),
+  callback = function()
+    vim.wo.number = false
   end,
 })
 
@@ -239,6 +254,199 @@ require('lazy').setup({
 
   -- "gc" to comment visual regions/lines
   { 'numToStr/Comment.nvim', opts = {} },
+  -- quarto
+  {
+    'quarto-dev/quarto-nvim',
+    enabled = false,
+    opts = {
+      lspFeatures = {
+        -- NOTE: put whatever languages you want here:
+        languages = { 'r', 'python', 'rust' },
+        chunks = 'all',
+        diagnostics = {
+          enabled = true,
+          triggers = { 'BufWritePost' },
+        },
+        completion = {
+          enabled = true,
+        },
+      },
+      codeRunner = {
+        enabled = true,
+        default_method = 'molten',
+      },
+    },
+    dependencies = {
+      'jmbuhr/otter.nvim',
+      opts = {},
+    },
+    config = function(self, opts)
+      require('quarto').setup(opts)
+      local runner = require 'quarto.runner'
+      vim.api.nvim_create_autocmd('Filetype', {
+        pattern = { 'markdown', 'quarto' },
+        callback = function()
+          vim.keymap.set({ 'n', 'i' }, '<c-cr>', runner.run_cell, { desc = 'Run cell', silent = true })
+          vim.keymap.set('n', '<localleader>mra', runner.run_above, { desc = 'Run cell and above', silent = true })
+          vim.keymap.set({ 'n', 'i' }, '<localleader>mrl', runner.run_line, { desc = 'Run line', silent = true })
+          vim.keymap.set('v', '<c-cr>', runner.run_range, { desc = 'Run visual range', silent = true })
+        end,
+      })
+    end,
+  },
+  {
+    'nvimdev/dashboard-nvim',
+    event = 'VimEnter',
+    config = function()
+      require('dashboard').setup {
+        -- config
+      }
+    end,
+    dependencies = { { 'nvim-tree/nvim-web-devicons' } },
+  },
+
+  {
+    'folke/noice.nvim',
+    event = 'VeryLazy',
+    opts = {
+      -- add any options here
+    },
+    dependencies = {
+      -- if you lazy-load any plugin below, make sure to add proper `module="..."` entries
+      'MunifTanjim/nui.nvim',
+      -- OPTIONAL:
+      --   `nvim-notify` is only needed, if you want to use the notification view.
+      --   If not available, we use `mini` as the fallback
+      'rcarriga/nvim-notify',
+    },
+  },
+  {
+    'nvim-lualine/lualine.nvim',
+    dependencies = { 'nvim-tree/nvim-web-devicons' },
+  },
+  {
+    'benlubas/molten-nvim',
+    enabled = false,
+    version = '^1.8.3', -- use version <2.0.0 to avoid breaking changes
+    build = ':UpdateRemotePlugins',
+    dependencies = {
+      '3rd/image.nvim',
+      opts = {},
+    },
+    init = function()
+      -- this is an example, not a default. Please see the readme for more configuration options
+      vim.g.molten_output_win_max_height = 12
+      -- I find auto open annoying, keep in mind setting this option will require setting
+      -- a keybind for `:noautocmd MoltenEnterOutput` to open the output again
+      vim.g.molten_auto_open_output = false
+      --
+      -- this guide will be using image.nvim
+      -- Don't forget to setup and install the plugin if you want to view image outputs
+      vim.g.molten_image_provider = 'image.nvim'
+
+      -- optional, I like wrapping. works for virt text and the output window
+      vim.g.molten_wrap_output = true
+
+      -- Output as virtual text. Allows outputs to always be shown, works with images, but can
+      -- be buggy with longer images
+      vim.g.molten_virt_text_output = true
+
+      -- this will make it so the output shows up below the \`\`\` cell delimiter
+      vim.g.molten_virt_lines_off_by_1 = true
+    end,
+    keys = {
+      { '<localleader>mo', '<esc>:noautocmd MoltenShowOutput<cr>: noautocmd MoltenEnterOutput<cr>', mode = 'n', desc = '[M]olten enter [o]utput' },
+      { '<localleader>mi', '<esc>:MoltenInit<cr>', mode = 'n', desc = '[M]olten [i]nit' },
+      { '<localleader>mc', '<esc>:MoltenInterrupt<cr>', mode = 'n', desc = '[M]olten interrupt' },
+      { '<localleader>mrr', '<esc>:MoltenReevaluateCell<cr>', mode = 'n', desc = '[M]olten [R]eevaluateCell' },
+      { '<localleader>mres', '<esc>:MoltenRestart<cr>', mode = 'n', desc = '[M]olten [R][e][s]tart' },
+      { '<c-cr>', '<esc>:MoltenEvaluateLine<cr>', mode = 'n', desc = 'Evaluate line', ft = 'python' },
+      { '<c-cr>', '<esc>:MoltenEvaluateLine<cr><esc>i', mode = 'v', desc = 'Evaluate line', ft = 'python' },
+      { '<c-cr>', ':<c-u>MoltenEvaluateVisual<cr><esc>', mode = 'v', desc = 'Evaluate visual', ft = 'python' },
+    },
+  },
+  {
+    -- see the image.nvim readme for more information about configuring this plugin
+    '3rd/image.nvim',
+    enabled = false,
+    dependencies = { 'luarocks.nvim' },
+    opts = {
+      backend = 'kitty', -- whatever backend you would like to use
+      max_width = 100,
+      max_height = 12,
+      max_height_window_percentage = math.huge,
+      max_width_window_percentage = math.huge,
+      window_overlap_clear_enabled = true, -- toggles images when windows are overlapped
+      window_overlap_clear_ft_ignore = { 'cmp_menu', 'cmp_docs', '' },
+    },
+  },
+  {
+    'vhyrro/luarocks.nvim',
+    enabled = false,
+    priority = 1000, -- Very high priority is required, luarocks.nvim should run as the first plugin in your config.
+    config = true,
+  },
+  {
+    'akinsho/toggleterm.nvim',
+    version = '*',
+    opts = {
+      -- open_mapping = [[<c-\>]],
+      hide_numbers = true,
+      autochdir = true,
+      winbar = {
+        enabled = false,
+      },
+      shade_terminals = false,
+    },
+    config = true,
+  },
+
+  -- vim-slime
+  {
+    'jpalardy/vim-slime',
+    enabled = true,
+    init = function()
+      vim.g.slime_target = 'neovim'
+      -- vim.g.slime_target = 'kitty'
+      vim.g.slime_python_ipython = 1
+      vim.g.slime_dispatch_ipython_pause = 100
+      vim.g.slime_cell_delimiter = '#\\s\\=%%'
+      vim.cmd [[
+      " function! _EscapeText_quarto(text)
+      "   if slime#config#resolve("python_ipython") && len(split(a:text,"\n")) > 1
+      "     return ["%cpaste -q\n", slime#config#resolve("dispatch_ipython_pause"), a:text, "--\n"]
+      "   else
+      "     let empty_lines_pat = '\(^\|\n\)\zs\(\s*\n\+\)\+'
+      "     let no_empty_lines = substitute(a:text, empty_lines_pat, "", "g")
+      "     let dedent_pat = '\(^\|\n\)\zs'.matchstr(no_empty_lines, '^\s*')
+      "     let dedented_lines = substitute(no_empty_lines, dedent_pat, "", "g")
+      "     let except_pat = '\(elif\|else\|except\|finally\)\@!'
+      "     let add_eol_pat = '\n\s[^\n]\+\n\zs\ze\('.except_pat.'\S\|$\)'
+      "     return substitute(dedented_lines, add_eol_pat, "\n", "g")
+      "   end
+      " endfunction
+      function! _EscapeText_python(text)
+        if slime#config#resolve("python_ipython") && len(split(a:text,"\n")) > 1
+          return ["%cpaste -q\n", slime#config#resolve("dispatch_ipython_pause"), a:text, "--\n"]
+        else
+          let empty_lines_pat = '\(^\|\n\)\zs\(\s*\n\+\)\+'
+          let no_empty_lines = substitute(a:text, empty_lines_pat, "", "g")
+          let dedent_pat = '\(^\|\n\)\zs'.matchstr(no_empty_lines, '^\s*')
+          let dedented_lines = substitute(no_empty_lines, dedent_pat, "", "g")
+          let except_pat = '\(elif\|else\|except\|finally\)\@!'
+          let add_eol_pat = '\n\s[^\n]\+\n\zs\ze\('.except_pat.'\S\|$\)'
+          return substitute(dedented_lines, add_eol_pat, "\n", "g")
+        end
+      endfunction
+
+    ]]
+    end,
+    config = function()
+      vim.keymap.set({ 'n', 'i' }, '<c-cr>', function()
+        vim.cmd [[ call slime#send_cell() ]]
+      end, { desc = 'Send code cell to terminal' })
+    end,
+  },
 
   -- Here is a more advanced example where we pass configuration
   -- options to `gitsigns.nvim`. This is equivalent to the following Lua:
@@ -555,6 +763,8 @@ require('lazy').setup({
       local capabilities = vim.lsp.protocol.make_client_capabilities()
       capabilities = vim.tbl_deep_extend('force', capabilities, require('cmp_nvim_lsp').default_capabilities())
 
+      capabilities.workspace.didChangeWatchedFiles.dynamicRegistration = false
+
       -- Enable the following language servers
       --  Feel free to add/remove any LSPs that you want here. They will automatically be installed.
       --
@@ -567,7 +777,7 @@ require('lazy').setup({
       local servers = {
         -- clangd = {},
         -- gopls = {},
-        -- pyright = {},
+        pyright = {},
         -- rust_analyzer = {},
         -- ... etc. See `:help lspconfig-all` for a list of all the pre-configured LSPs
         --
@@ -653,7 +863,7 @@ require('lazy').setup({
       formatters_by_ft = {
         lua = { 'stylua' },
         -- Conform can also run multiple formatters sequentially
-        -- python = { "isort", "black" },
+        python = { 'isort', 'black' },
         --
         -- You can use a sub-list to tell conform to run *until* a formatter
         -- is found.
@@ -682,12 +892,12 @@ require('lazy').setup({
           -- `friendly-snippets` contains a variety of premade snippets.
           --    See the README about individual language/framework/plugin snippets:
           --    https://github.com/rafamadriz/friendly-snippets
-          -- {
-          --   'rafamadriz/friendly-snippets',
-          --   config = function()
-          --     require('luasnip.loaders.from_vscode').lazy_load()
-          --   end,
-          -- },
+          {
+            'rafamadriz/friendly-snippets',
+            config = function()
+              require('luasnip.loaders.from_vscode').lazy_load()
+            end,
+          },
         },
       },
       'saadparwaiz1/cmp_luasnip',
@@ -729,7 +939,7 @@ require('lazy').setup({
           -- Accept ([y]es) the completion.
           --  This will auto-import if your LSP supports it.
           --  This will expand snippets if the LSP sent a snippet.
-          ['<C-y>'] = cmp.mapping.confirm { select = true },
+          ['<cr>'] = cmp.mapping.confirm { select = true },
 
           -- If you prefer more traditional completion keymaps,
           -- you can uncomment the following lines
@@ -765,6 +975,7 @@ require('lazy').setup({
           --    https://github.com/L3MON4D3/LuaSnip?tab=readme-ov-file#keymaps
         },
         sources = {
+          -- { name = 'otter' },
           { name = 'nvim_lsp' },
           { name = 'luasnip' },
           { name = 'path' },
@@ -778,16 +989,35 @@ require('lazy').setup({
     -- change the command in the config to whatever the name of that colorscheme is.
     --
     -- If you want to see what colorschemes are already installed, you can use `:Telescope colorscheme`.
-    'folke/tokyonight.nvim',
+    -- 'folke/tokyonight.nvim',
+    'Mofiqul/vscode.nvim',
     priority = 1000, -- Make sure to load this before all the other start plugins.
+    enabled = true,
+    lazy = false,
     init = function()
       -- Load the colorscheme here.
       -- Like many other themes, this one has different styles, and you could load
       -- any other, such as 'tokyonight-storm', 'tokyonight-moon', or 'tokyonight-day'.
-      vim.cmd.colorscheme 'tokyonight-night'
+      vim.cmd.colorscheme 'vscode'
 
       -- You can configure highlights by doing something like:
       vim.cmd.hi 'Comment gui=none'
+    end,
+  },
+  {
+    'rebelot/kanagawa.nvim',
+    enabled = false,
+    priority = 1000,
+    config = function()
+      vim.cmd.colorscheme 'kanagawa'
+      vim.api.nvim_set_hl(0, 'TermCursor', { fg = '#A6E3A1', bg = '#A6E3A1' })
+    end,
+  },
+
+  {
+    'andrew-george/telescope-themes',
+    config = function()
+      require('telescope').load_extension 'themes'
     end,
   },
 
@@ -846,6 +1076,41 @@ require('lazy').setup({
         additional_vim_regex_highlighting = { 'ruby' },
       },
       indent = { enable = true, disable = { 'ruby' } },
+      textobjects = {
+        move = {
+          enable = true,
+          set_jumps = false, -- you can change this if you want.
+          goto_next_start = {
+            --- ... other keymaps
+            [']b'] = { query = '@code_cell.inner', desc = 'next code block' },
+          },
+          goto_previous_start = {
+            --- ... other keymaps
+            ['[b'] = { query = '@code_cell.inner', desc = 'previous code block' },
+          },
+        },
+        select = {
+          enable = true,
+          lookahead = true, -- you can change this if you want
+          keymaps = {
+            --- ... other keymaps
+            ['ib'] = { query = '@code_cell.inner', desc = 'in block' },
+            ['ab'] = { query = '@code_cell.outer', desc = 'around block' },
+          },
+        },
+        swap = { -- Swap only works with code blocks that are under the same
+          -- markdown header
+          enable = true,
+          swap_next = {
+            --- ... other keymap
+            ['<leader>sbl'] = '@code_cell.outer',
+          },
+          swap_previous = {
+            --- ... other keymap
+            ['<leader>sbh'] = '@code_cell.outer',
+          },
+        },
+      },
     },
     config = function(_, opts)
       -- [[ Configure Treesitter ]] See `:help nvim-treesitter`
@@ -876,8 +1141,8 @@ require('lazy').setup({
   -- require 'kickstart.plugins.debug',
   -- require 'kickstart.plugins.indent_line',
   -- require 'kickstart.plugins.lint',
-  -- require 'kickstart.plugins.autopairs',
-  -- require 'kickstart.plugins.neo-tree',
+  require 'kickstart.plugins.autopairs',
+  require 'kickstart.plugins.neo-tree',
   -- require 'kickstart.plugins.gitsigns', -- adds gitsigns recommend keymaps
 
   -- NOTE: The import below can automatically add your own plugins, configuration, etc from `lua/custom/plugins/*.lua`
