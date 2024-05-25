@@ -1,0 +1,13 @@
+```{python}
+def hello():
+    print("hello")
+```
+
+```{python}
+import numpy as np
+x = np.array([1, 2, 6])
+```
+
+```{python}
+print(x)
+```
