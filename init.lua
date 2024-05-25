@@ -301,7 +301,7 @@ require('lazy').setup({
     ]]
     end,
     config = function()
-      vim.keymap.set({ 'n', 'i' }, '<m-cr>', function()
+      vim.keymap.set({ 'n', 'i' }, '<c-cr>', function()
         vim.cmd [[ call slime#send_cell() ]]
       end, { desc = 'Send code cell to terminal' })
     end,
