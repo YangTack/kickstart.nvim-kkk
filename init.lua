@@ -123,6 +123,8 @@ vim.opt.undofile = true
 
 -- set default shiftwidth
 vim.opt.shiftwidth = 4
+vim.opt.expandtab = true
+vim.opt.tabstop = 4
 
 -- Case-insensitive searching UNLESS \C or one or more capital letters in the search term
 vim.opt.ignorecase = true
@@ -252,45 +254,6 @@ require('lazy').setup({
 
   -- "gc" to comment visual regions/lines
   { 'numToStr/Comment.nvim', opts = {} },
-  -- quarto
-  {
-    'quarto-dev/quarto-nvim',
-    opts = {
-      lspFeatures = {
-        -- NOTE: put whatever languages you want here:
-        languages = { 'r', 'python', 'rust' },
-        chunks = 'all',
-        diagnostics = {
-          enabled = true,
-          triggers = { 'BufWritePost' },
-        },
-        completion = {
-          enabled = true,
-        },
-      },
-      codeRunner = {
-        enabled = true,
-        default_method = 'molten',
-      },
-    },
-    dependencies = {
-      'jmbuhr/otter.nvim',
-      opts = {},
-    },
-    config = function(self, opts)
-      require('quarto').setup(opts)
-      local runner = require 'quarto.runner'
-      vim.api.nvim_create_autocmd('Filetype', {
-        pattern = { 'markdown', 'quarto' },
-        callback = function()
-          vim.keymap.set({ 'n', 'i' }, '<c-cr>', runner.run_cell, { desc = 'Run cell', silent = true })
-          vim.keymap.set('n', '<localleader>mra', runner.run_above, { desc = 'Run cell and above', silent = true })
-          vim.keymap.set({ 'n', 'i' }, '<localleader>mrl', runner.run_line, { desc = 'Run line', silent = true })
-          vim.keymap.set('v', '<c-cr>', runner.run_range, { desc = 'Run visual range', silent = true })
-        end,
-      })
-    end,
-  },
   {
     'nvimdev/dashboard-nvim',
     event = 'VimEnter',
@@ -320,110 +283,6 @@ require('lazy').setup({
   {
     'nvim-lualine/lualine.nvim',
     dependencies = { 'nvim-tree/nvim-web-devicons' },
-  },
-  {
-    'benlubas/molten-nvim',
-    version = '^1.8.3', -- use version <2.0.0 to avoid breaking changes
-    build = ':UpdateRemotePlugins',
-    dependencies = {
-      '3rd/image.nvim',
-      opts = {},
-    },
-    init = function()
-      -- this is an example, not a default. Please see the readme for more configuration options
-      vim.g.molten_output_win_max_height = 12
-      -- I find auto open annoying, keep in mind setting this option will require setting
-      -- a keybind for `:noautocmd MoltenEnterOutput` to open the output again
-      vim.g.molten_auto_open_output = false
-      --
-      -- this guide will be using image.nvim
-      -- Don't forget to setup and install the plugin if you want to view image outputs
-      vim.g.molten_image_provider = 'image.nvim'
-
-      -- optional, I like wrapping. works for virt text and the output window
-      vim.g.molten_wrap_output = true
-
-      -- Output as virtual text. Allows outputs to always be shown, works with images, but can
-      -- be buggy with longer images
-      vim.g.molten_virt_text_output = true
-
-      -- this will make it so the output shows up below the \`\`\` cell delimiter
-      vim.g.molten_virt_lines_off_by_1 = true
-    end,
-    keys = {
-      { '<localleader>mo', '<esc>:noautocmd MoltenShowOutput<cr>: noautocmd MoltenEnterOutput<cr>', mode = 'n', desc = '[M]olten enter [o]utput' },
-      { '<localleader>mi', '<esc>:MoltenInit<cr>', mode = 'n', desc = '[M]olten [i]nit' },
-      { '<localleader>mc', '<esc>:MoltenInterrupt<cr>', mode = 'n', desc = '[M]olten interrupt' },
-      { '<localleader>mrr', '<esc>:MoltenReevaluateCell<cr>', mode = 'n', desc = '[M]olten [R]eevaluateCell' },
-      { '<localleader>mres', '<esc>:MoltenRestart<cr>', mode = 'n', desc = '[M]olten [R][e][s]tart' },
-      { '<c-cr>', '<esc>:MoltenEvaluateLine<cr>', mode = 'n', desc = 'Evaluate line', ft = 'python' },
-      { '<c-cr>', '<esc>:MoltenEvaluateLine<cr><esc>i', mode = 'v', desc = 'Evaluate line', ft = 'python' },
-      { '<c-cr>', ':<c-u>MoltenEvaluateVisual<cr><esc>', mode = 'v', desc = 'Evaluate visual', ft = 'python' },
-    },
-  },
-  {
-    -- see the image.nvim readme for more information about configuring this plugin
-    '3rd/image.nvim',
-    dependencies = { 'luarocks.nvim' },
-    opts = {
-      backend = 'kitty', -- whatever backend you would like to use
-      max_width = 100,
-      max_height = 12,
-      max_height_window_percentage = math.huge,
-      max_width_window_percentage = math.huge,
-      window_overlap_clear_enabled = true, -- toggles images when windows are overlapped
-      window_overlap_clear_ft_ignore = { 'cmp_menu', 'cmp_docs', '' },
-    },
-  },
-  {
-    'vhyrro/luarocks.nvim',
-    priority = 1000, -- Very high priority is required, luarocks.nvim should run as the first plugin in your config.
-    config = true,
-  },
-  -- vim-slime
-  {
-    'jpalardy/vim-slime',
-    enabled = false,
-    init = function()
-      vim.g.slime_target = 'neovim'
-      vim.g.slime_python_ipython = 1
-      vim.g.slime_dispatch_ipython_pause = 100
-      vim.g.slime_cell_delimiter = '#\\s\\=%%'
-      vim.cmd [[
-      function! _EscapeText_quarto(text)
-        if slime#config#resolve("python_ipython") && len(split(a:text,"\n")) > 1
-          return ["%cpaste -q\n", slime#config#resolve("dispatch_ipython_pause"), a:text, "--\n"]
-        else
-          let empty_lines_pat = '\(^\|\n\)\zs\(\s*\n\+\)\+'
-          let no_empty_lines = substitute(a:text, empty_lines_pat, "", "g")
-          let dedent_pat = '\(^\|\n\)\zs'.matchstr(no_empty_lines, '^\s*')
-          let dedented_lines = substitute(no_empty_lines, dedent_pat, "", "g")
-          let except_pat = '\(elif\|else\|except\|finally\)\@!'
-          let add_eol_pat = '\n\s[^\n]\+\n\zs\ze\('.except_pat.'\S\|$\)'
-          return substitute(dedented_lines, add_eol_pat, "\n", "g")
-        end
-      endfunction
-      function! _EscapeText_python(text)
-        if slime#config#resolve("python_ipython") && len(split(a:text,"\n")) > 1
-          return ["%cpaste -q\n", slime#config#resolve("dispatch_ipython_pause"), a:text, "--\n"]
-        else
-          let empty_lines_pat = '\(^\|\n\)\zs\(\s*\n\+\)\+'
-          let no_empty_lines = substitute(a:text, empty_lines_pat, "", "g")
-          let dedent_pat = '\(^\|\n\)\zs'.matchstr(no_empty_lines, '^\s*')
-          let dedented_lines = substitute(no_empty_lines, dedent_pat, "", "g")
-          let except_pat = '\(elif\|else\|except\|finally\)\@!'
-          let add_eol_pat = '\n\s[^\n]\+\n\zs\ze\('.except_pat.'\S\|$\)'
-          return substitute(dedented_lines, add_eol_pat, "\n", "g")
-        end
-      endfunction
-
-    ]]
-    end,
-    config = function()
-      vim.keymap.set({ 'n', 'i' }, '<c-cr>', function()
-        vim.cmd [[ call slime#send_cell() ]]
-      end, { desc = 'Send code cell to terminal' })
-    end,
   },
 
   -- Here is a more advanced example where we pass configuration
@@ -1039,19 +898,11 @@ require('lazy').setup({
       --  Check out: https://github.com/echasnovski/mini.nvim
     end,
   },
-  {
-    'YangTack/jupytext.nvim',
-    opts = {
-      style = 'quarto',
-      output_extension = 'ju.qmd',
-      force_ft = 'quarto',
-    },
-  },
   { -- Highlight, edit, and navigate code
     'nvim-treesitter/nvim-treesitter',
     build = ':TSUpdate',
     opts = {
-      ensure_installed = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'vim', 'vimdoc', 'markdown_inline' },
+      ensure_installed = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'vim', 'vimdoc' },
       -- Autoinstall languages that are not installed
       auto_install = true,
       highlight = {
