@@ -729,12 +729,12 @@ require('lazy').setup({
           -- `friendly-snippets` contains a variety of premade snippets.
           --    See the README about individual language/framework/plugin snippets:
           --    https://github.com/rafamadriz/friendly-snippets
-          -- {
-          --   'rafamadriz/friendly-snippets',
-          --   config = function()
-          --     require('luasnip.loaders.from_vscode').lazy_load()
-          --   end,
-          -- },
+          {
+            'rafamadriz/friendly-snippets',
+            config = function()
+              require('luasnip.loaders.from_vscode').lazy_load()
+            end,
+          },
         },
       },
       'saadparwaiz1/cmp_luasnip',
@@ -829,7 +829,7 @@ require('lazy').setup({
     -- 'folke/tokyonight.nvim',
     'Mofiqul/vscode.nvim',
     priority = 1000, -- Make sure to load this before all the other start plugins.
-    enabled = false,
+    enabled = true,
     init = function()
       -- Load the colorscheme here.
       -- Like many other themes, this one has different styles, and you could load
@@ -844,6 +844,7 @@ require('lazy').setup({
     'rebelot/kanagawa.nvim',
     enabled = true,
     lazy = false,
+    enable = false,
     priority = 1000,
     config = function()
       vim.cmd.colorscheme 'kanagawa'
