@@ -443,8 +443,9 @@ require('lazy').setup({
     end,
     config = function()
       vim.keymap.set({ 'n', 'i' }, '<c-cr>', function()
+        vim.cmd [[ w ]]
         vim.cmd [[ call slime#send_cell() ]]
-      end, { desc = 'Send code cell to terminal' })
+      end, { desc = 'Send code cell to terminal', silent = true })
     end,
   },
 
